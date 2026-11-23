@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>能動的推論への「常道」デモ</title>
+<style>
+:root { --navy:#1f3a5f; --orange:#e8892b; --pale:#d6e4f0; --gray:#e8e8e8; --ink:#1f2933; --bg:#f7f8fa; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif; line-height:1.7; }
+.wrap { max-width:1000px; margin:0 auto; padding:16px 16px 60px; }
+h1 { font-size:1.5rem; color:var(--navy); margin:.3em 0 .1em; }
+h2 { font-size:1.2rem; color:var(--navy); margin:.6em 0 .4em; }
+.sub, .muted { color:#5b6770; font-size:.9rem; }
+.card { background:#fff; border-radius:14px; padding:16px 20px; margin:14px 0; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.pale { background:var(--pale); }
+.btn { display:inline-block; border:0; border-radius:10px; padding:11px 22px; font-size:1rem; font-weight:700; background:var(--orange); color:#fff; cursor:pointer; margin:4px 6px 4px 0; }
+.btn:disabled { opacity:.45; cursor:default; }
+.btn.sec { background:var(--navy); }
+.btn.ghost { background:#fff; color:var(--navy); border:2px solid var(--navy); }
+.tabs { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+.tabs button { border:2px solid var(--navy); background:#fff; color:var(--navy); border-radius:22px; padding:7px 16px; font-size:.98rem; font-weight:700; cursor:pointer; }
+.tabs button.on { background:var(--navy); color:#fff; }
+.scale { margin:12px 0 6px; }
+.scale label { font-weight:700; display:block; }
+.scale .ends { display:flex; justify-content:space-between; font-size:.8rem; color:#5b6770; }
+.pts { display:flex; gap:4px; }
+.pts button { flex:1; padding:9px 0; border-radius:8px; border:1px solid #c8ced4; background:#fff; font-size:1rem; cursor:pointer; }
+.pts button.on { background:var(--orange); color:#fff; border-color:var(--orange); font-weight:700; }
+.stage { position:relative; width:100%; max-width:560px; aspect-ratio:1/1; margin:8px auto; background:#fff; border:2px solid #333; overflow:hidden; }
+.stage img, .stage > svg { width:100%; height:100%; object-fit:contain; display:block; }
+.fix { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:3rem; color:#333; background:#fff; }
+.grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; }
+.row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.stat { font-size:1.5rem; font-weight:800; color:var(--orange); }
+table { border-collapse:collapse; width:100%; font-size:.92rem; }
+th, td { border-bottom:1px solid var(--gray); padding:6px 8px; text-align:left; vertical-align:top; }
+th { color:var(--navy); }
+textarea, input[type=text] { width:100%; font-size:1rem; padding:8px 10px; border:1px solid #c8ced4; border-radius:8px; font-family:inherit; }
+input[type=range] { width:100%; accent-color:var(--orange); }
+.center { text-align:center; }
+.thumbs { display:flex; gap:8px; flex-wrap:wrap; }
+.thumbs > div { width:90px; height:90px; border:1px solid #ccc; background:#fff; }
+.thumbs img { width:100%; height:100%; object-fit:contain; }
+.note { border-left:4px solid var(--orange); padding:6px 12px; background:#fff7ee; border-radius:6px; font-size:.92rem; }
+.big { font-size:1.35rem; line-height:1.6; }
+.stmt { padding:22px 18px; border-radius:12px; background:#fff; border:1px solid #d5dade; font-size:1.4rem; text-align:center; margin:10px 0; }
+@media (max-width:600px) { h1 { font-size:1.25rem; } .stmt { font-size:1.15rem; } }
+.prog { height:8px; background:var(--gray); border-radius:4px; overflow:hidden; margin:6px 0 12px; }
+.prog > div { height:100%; background:var(--orange); width:0; transition:width .2s; }
+input[type=range].untouched { opacity:.5; }
+input[type=range] { height:36px; }
+.patch { width:100%; max-width:360px; aspect-ratio:3/2; margin:0 auto; border-radius:8px; }
+.graybox { background:#808080; padding:28px 16px; border-radius:12px; }
+.chip { display:inline-block; width:1.1em; height:1.1em; border-radius:3px; vertical-align:-0.15em; margin-right:6px; border:1px solid rgba(0,0,0,.2); }
+.toggle { display:flex; gap:8px; flex-wrap:wrap; }
+.toggle button { border:2px solid var(--navy); background:#fff; color:var(--navy); border-radius:20px; padding:6px 14px; font-size:.95rem; cursor:pointer; font-family:inherit; }
+.toggle button.on { background:var(--navy); color:#fff; }
+.stim { width:100%; max-width:420px; aspect-ratio:1/1; margin:0 auto; display:block; background:#fff; border-radius:8px; object-fit:contain; border:1px solid #d5dade; }
+.stim svg { width:100%; height:100%; display:block; }
+.q { margin:12px 0; }
+.q > div:first-child { font-weight:700; margin-bottom:6px; }
+.q.off { opacity:.35; pointer-events:none; }
+.emo { display:inline-block; background:var(--orange); color:#fff; font-weight:800; border-radius:10px; padding:6px 14px; margin:4px 6px 4px 0; font-size:1.15rem; }
+.k2 { display:grid; grid-template-columns:110px 1fr 1fr; gap:6px; font-size:.9rem; }
+.k2 div { background:var(--gray); border-radius:8px; padding:8px; text-align:center; }
+.k2 .h { background:transparent; font-weight:700; color:var(--navy); }
+.k2 .hit { background:var(--orange); color:#fff; font-weight:800; }
+.datacard { border:2px dashed #8d99ae; }
+select { font-size:1rem; padding:4px 6px; font-family:inherit; }
+
+.res svg { max-width:640px; display:block; margin:0 auto; }
+.kpi { display:flex; gap:12px; flex-wrap:wrap; margin:8px 0; }
+.kpi > div { background:var(--gray); border-radius:10px; padding:8px 14px; min-width:130px; font-size:.85rem; }
+.kpi b { display:block; font-size:1.3rem; color:var(--orange); }
+[hidden] { display:none !important; }
+</style></head>
+<body>
+<div class="wrap">
+  <h1>能動的推論への「常道」 デモ</h1>
+  <p class="sub">スライドの内容を、自分で数値を動かして確かめるページです（講師作成）。計算はこのブラウザの中だけで行われ、どこにも送信されません。数値はすべて小さな例で、自然対数（単位 nats）を使っています。</p>
+  <div class="tabs">
+    <button id="tab-bayes" class="on">① ベイズ推論</button>
+    <button id="tab-seq">② 何回も観測</button>
+    <button id="tab-kl">③ KLの向き</button>
+    <button id="tab-gap">④ モデルと世界のずれ</button>
+    <button id="tab-act">⑤ 知覚か行動か</button>
+    <button id="tab-vfe">⑥ 変分自由エネルギー</button>
+    <button id="tab-gauss">⑦ 予測誤差と精度</button>
+    <button id="tab-occam">⑧ 単純さと正確さ</button>
+    <button id="tab-boltz">⑨ 物理で見る</button>
+    <button id="tab-gamma">⑩ 方策の精度 γ</button>
+    <button id="tab-cafe">⑪ エスプレッソ</button>
+    <button id="tab-efe">⑫ 探索と活用</button>
+    <button id="tab-ra">⑬ リスクと曖昧さ</button>
+  </div>
+
+  <!-- ① -->
+  <section id="sec-bayes">
+    <div class="card pale">
+      <h2>① リンゴか、カエルか（ベイズ推論）</h2>
+      <p>事前分布と尤度を決めて、「跳ねた／跳ねなかった」を観測すると、事後分布・サプライズ・ベイズ的サプライズがどう変わるかを見ます。ここで決めたモデルは⑥⑨のタブでも使われます。</p>
+      <p class="muted">スライド「リンゴか、カエルか」「ベイズ則で計算する」「2つの『驚き』」「モデルを比べる」に対応。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="toggle" id="b-preset">
+          <button data-p="book" class="on">スライドの例</button>
+          <button data-p="apple">いつもリンゴ</button>
+          <button data-p="frog">いつもカエル</button>
+        </div>
+        <div class="scale"><label>事前分布 P(カエル) ＝ <span id="b-p0v"></span></label><input type="range" id="b-p0" min="0" max="100" value="10"><div class="ends"><span>リンゴだと確信</span><span>カエルだと確信</span></div></div>
+        <div class="scale"><label>尤度 P(跳ねる | カエル) ＝ <span id="b-lfv"></span></label><input type="range" id="b-lf" min="0" max="100" value="81"></div>
+        <div class="scale"><label>尤度 P(跳ねる | リンゴ) ＝ <span id="b-lav"></span></label><input type="range" id="b-la" min="0" max="100" value="1"></div>
+        <label><b>観測</b></label>
+        <div class="toggle" id="b-obs"><button data-o="1" class="on">跳ねた</button><button data-o="0">跳ねなかった</button></div>
+      </div>
+      <div class="card">
+        <h2>事前 → 事後</h2>
+        <div id="b-bars" class="res"></div>
+        <div class="kpi" id="b-kpi"></div>
+      </div>
+    </div>
+    <div class="card"><h2>計算の手順</h2><div id="b-steps"></div>
+      <p class="note">試してみよう：「いつもリンゴ」にすると、ベイズ的サプライズは 0 なのにサプライズは大きくなります。「いつもカエル」ではサプライズが小さくなります（モデル比較）。観測を「跳ねなかった」に変えるとどうなるでしょう。</p></div>
+  </section>
+
+  <!-- ② -->
+  <section id="sec-kl" hidden>
+    <div class="card pale">
+      <h2>③ KLダイバージェンスは向きで値が変わる</h2>
+      <p>2択の分布 Q と P を決めて、KL[Q‖P] と KL[P‖Q] を比べます。KL[Q‖P] ＝ Σ Q (ln Q − ln P) は、<b>左側の分布 Q で重みをつけた平均</b>です。</p>
+      <p class="muted">スライド「KLは向きで値が変わる」に対応。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="toggle" id="k-preset">
+          <button data-p="ex" class="on">スライドの例（0.5 と 0.9）</button>
+          <button data-p="mir">鏡像（0.1 と 0.9）</button>
+          <button data-p="same">同じ分布</button>
+          <button data-p="zero">P に 0 がある</button>
+        </div>
+        <div class="scale"><label>Q(状態1) ＝ <span id="k-qv"></span></label><input type="range" id="k-q" min="0" max="100" value="50"></div>
+        <div class="scale"><label>P(状態1) ＝ <span id="k-pv"></span></label><input type="range" id="k-p" min="0" max="100" value="90"></div>
+        <div id="k-bars" class="res"></div>
+      </div>
+      <div class="card">
+        <div class="kpi" id="k-kpi"></div>
+        <h2>Q を動かしたときの2つのKL（P は固定）</h2>
+        <div id="k-curve" class="res"></div>
+        <p class="note">鏡像の関係（Q と P が左右反転）のときだけ、2つの値が同じになります。P に 0 があって Q がそこに確率を置くと、KL[Q‖P] は無限大になります。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ -->
+  <section id="sec-vfe" hidden>
+    <div class="card pale">
+      <h2>⑥ 変分自由エネルギー F を下げる</h2>
+      <p>近似事後分布 Q(カエル) を動かして、F ＝ Σ Q [ln Q − ln P(y, x)] がどう変わるかを見ます。F は<b>サプライズ以上</b>で、Q が本当の事後分布に一致したときにサプライズと等しくなります。モデルは①で決めたものです。</p>
+      <p class="muted">スライド「自由エネルギーの3通りの式」「③F はサプライズの上限」「数値で確かめる：F が下がる」に対応。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="scale"><label>近似事後分布 Q(カエル) ＝ <span id="v-qv"></span></label><input type="range" id="v-q" min="1" max="99" value="10"></div>
+        <button class="btn" id="v-gd">勾配降下で Q を更新</button>
+        <button class="btn ghost" id="v-reset">Q を事前分布に戻す</button>
+        <div id="v-curve" class="res"></div>
+        <p class="muted" id="v-warn"></p>
+      </div>
+      <div class="card">
+        <div class="kpi" id="v-kpi"></div>
+        <h2>F ＝ ダイバージェンス ＋ サプライズ</h2>
+        <div id="v-stack" class="res"></div>
+        <h2>3通りの書き方（どれも同じ F）</h2>
+        <table id="v-tab"></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ -->
+  <section id="sec-boltz" hidden>
+    <div class="card pale">
+      <h2>⑨ 物理の目で見る：温度とボルツマン分布</h2>
+      <p>エネルギーを E(x) ＝ −ln P(y, x) とおき、ボルツマン分布 p(x) ∝ exp(−E(x)／T) を作ります。温度 T を動かすと分布が変わり、<b>T ＝ 1 のときちょうど事後分布</b>になって、自由エネルギーの最小値 −T ln Z がサプライズと一致します。モデルは①で決めたものです。</p>
+      <p class="muted">スライド「物理の自由エネルギー」「ボルツマン分布と分配関数」「物理とベイズの対応表」「リンゴとカエルを物理で見る」に対応（ここでは k ＝ 1 としています）。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="scale"><label>温度 T ＝ <span id="z-tv"></span></label><input type="range" id="z-t" min="-100" max="100" value="0"><div class="ends"><span>低温：谷底に集まる</span><span>高温：広く散らばる</span></div></div>
+        <button class="btn ghost" id="z-one">T ＝ 1 にする</button>
+        <div id="z-levels" class="res"></div>
+      </div>
+      <div class="card">
+        <div class="kpi" id="z-kpi"></div>
+        <h2>温度と P(カエル) の関係</h2>
+        <div id="z-curve" class="res"></div>
+        <p class="note">低温ではエネルギーの低い状態だけに集まり、高温では 0.5 ずつに近づきます。T ＝ 1 の点（オレンジの点線）が事後分布です。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ -->
+  <section id="sec-act" hidden>
+    <div class="card pale">
+      <h2>⑤ 知覚か行動か：体温のシミュレーション</h2>
+      <p>途中で外が暑くなり、体の温度（＝感覚）が上がりはじめます。脳は「体温は37 ℃のはず」という予測をもっています。<b>信念 μ</b> は感覚と予測の折り合いで動き（知覚）、<b>行動</b>は感覚を μ に近づけるように世界を変えます（例：窓を開ける）。予測の確かさを変えて、どちらでズレが減るかを比べてください。</p>
+      <p class="muted">スライド「ズレを消す2つの方向」「どちらを使うかは『確信度』で決まる」「知覚と行動の役割分担」に対応。F ＝ ½π感覚(s − μ)² ＋ ½π予測(μ − 37)²、μ と行動はどちらも F を下げる向きに動く（講師作成の簡単なモデル）。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="scale"><label>予測（37 ℃）の確かさ π予測 ＝ <span id="a-ppv"></span></label><input type="range" id="a-pp" min="-100" max="100" value="60"><div class="ends"><span>ゆるい</span><span>とても強い</span></div></div>
+        <div class="scale"><label>感覚の確かさ π感覚 ＝ <span id="a-psv"></span></label><input type="range" id="a-ps" min="-100" max="100" value="0"></div>
+        <div class="scale"><label>外の暑さ ＝ <span id="a-hv"></span></label><input type="range" id="a-h" min="380" max="420" value="400"></div>
+        <label><b>行動</b></label>
+        <div class="toggle" id="a-on"><button data-v="1" class="on">行動あり</button><button data-v="0">行動なし（知覚だけ）</button></div>
+        <div class="toggle" style="margin-top:8px" id="a-preset"><button data-p="strong">体温（強い予測）</button><button data-p="weak">リンゴ（ゆるい予測）</button></div>
+        <button class="btn" id="a-run">シミュレーション開始</button>
+      </div>
+      <div class="card">
+        <div id="a-plot" class="res"></div>
+        <div class="kpi" id="a-kpi"></div>
+      </div>
+    </div>
+    <div class="card"><p class="note">試してみよう：予測を強くすると、信念 μ は37 ℃近くにとどまり、大きなズレを行動で解消します。予測をゆるくすると、μ が感覚に合わせて上がり（考えを改める）、行動はほとんど起きません。「行動なし」にすると、体の温度は外の暑さに引きずられます。</p></div>
+  </section>
+
+  <!-- ⑥ -->
+  <section id="sec-efe" hidden>
+    <div class="card pale">
+      <h2>⑫ 探索と活用：ヒントつきスロット</h2>
+      <p>左右2台のスロットのうち、どちらか1台が当たりやすい台です。<b>すぐ選ぶ</b>と当たれば大当たり、<b>ヒントを見てから選ぶ</b>と当たっても小当たりです。3つの方策それぞれについて、期待自由エネルギー G ＝ −情報利得 − 実用的価値 を計算し、P(π) ∝ exp(−γG) で方策の確率を出します。</p>
+      <p class="muted">スライド「方策を『推論』で選ぶ」「期待自由エネルギーの式」「探索と活用を同じ単位で」「項を外すと、おなじみの理論に」「Smith たちの探索・活用課題」に対応。課題は Smith たちの課題を講師が簡略化したもので、数値の初期値も講師の設定。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="toggle" id="e-preset"><button data-p="avoid" class="on">大当たりへの好み：ふつう</button><button data-p="seek">大当たりが大好き</button><button data-p="sure">台がほぼわかっている</button></div>
+        <div class="scale"><label>「左が当たり台」という信念 ＝ <span id="e-pv"></span></label><input type="range" id="e-p" min="1" max="99" value="50"></div>
+        <div class="scale"><label>ヒントの正しさ ＝ <span id="e-hv"></span></label><input type="range" id="e-h" min="50" max="100" value="90"></div>
+        <div class="scale"><label>当たり台の当たる確率 ＝ <span id="e-wv"></span>（外れ台はその残り）</label><input type="range" id="e-w" min="50" max="100" value="80"></div>
+        <div class="scale"><label>好み：大当たり ＝ <span id="e-cbv"></span></label><input type="range" id="e-cb" min="0" max="80" value="30"></div>
+        <div class="scale"><label>好み：小当たり ＝ <span id="e-csv"></span></label><input type="range" id="e-cs" min="0" max="80" value="20"></div>
+        <div class="scale"><label>好み：外れ ＝ <span id="e-clv"></span></label><input type="range" id="e-cl" min="-40" max="0" value="-10"></div>
+        <div class="scale"><label>方策の精度 γ ＝ <span id="e-gv"></span></label><input type="range" id="e-g" min="1" max="80" value="20"></div>
+        <label><b>G に含める項</b>（外すと「おなじみの理論」に）</label>
+        <div class="toggle" id="e-terms"><button data-t="ig" class="on">情報利得</button><button data-t="pv" class="on">実用的価値</button></div>
+      </div>
+      <div class="card">
+        <div id="e-bars" class="res"></div>
+        <table id="e-tab"></table>
+        <p class="muted">好みは対数の重み（softmax で P(o|C) に変換）。「何もなし」の重みは 0。</p>
+      </div>
+    </div>
+    <div class="card"><p class="note">試してみよう：大当たりへの好みを上げると「すぐ選ぶ」が増え（リスクを好む）、下げると「ヒントを見る」が増えます。信念を 0.9 にして台がほぼわかっていると、ヒントの情報利得は小さくなります。「実用的価値」を外すと情報だけで選ぶ（内発的動機づけ）、「情報利得」を外すと期待効用だけで選ぶことになります。</p></div>
+  </section>
+
+  <!-- ⑦ -->
+  <section id="sec-ra" hidden>
+    <div class="card pale">
+      <h2>⑬ リスクと曖昧さ：2つの分け方は同じ G</h2>
+      <p>隠れ状態は2つ（s1, s2）、観測も2つ（o1, o2）。方策 A と B のそれぞれで「状態の予想 Q(s1 | π)」と「観測の当てになりやすさ（尤度の正確さ）」を決めます。G を<b>リスク ＋ 曖昧さ</b>と<b>−情報利得 − 実用的価値</b>の2通りで計算し、同じ値になることを確かめます。</p>
+      <p class="muted">スライド「期待自由エネルギーの式」「リスクと曖昧さ」に対応（講師作成の例）。</p>
+    </div>
+    <div class="card">
+      <div class="toggle" id="r-preset"><button data-p="slot" class="on">スロット（リスク）</button><button data-p="coin">天気予報とコイン（曖昧さ）</button></div>
+      <div class="scale"><label>好み P(o1 | C) ＝ <span id="r-cv"></span></label><input type="range" id="r-c" min="1" max="99" value="90"></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>方策 A：<span id="r-na"></span></h2>
+        <div class="scale"><label>Q(s1 | A) ＝ <span id="r-sav"></span></label><input type="range" id="r-sa" min="0" max="100" value="10"></div>
+        <div class="scale"><label>尤度の正確さ P(o1|s1) ＝ P(o2|s2) ＝ <span id="r-aav"></span></label><input type="range" id="r-aa" min="50" max="100" value="100"></div>
+      </div>
+      <div class="card"><h2>方策 B：<span id="r-nb"></span></h2>
+        <div class="scale"><label>Q(s1 | B) ＝ <span id="r-sbv"></span></label><input type="range" id="r-sb" min="0" max="100" value="50"></div>
+        <div class="scale"><label>尤度の正確さ P(o1|s1) ＝ P(o2|s2) ＝ <span id="r-abv"></span></label><input type="range" id="r-ab" min="50" max="100" value="100"></div>
+      </div>
+    </div>
+    <div class="card"><table id="r-tab"></table><div id="r-bars" class="res"></div>
+      <p class="note">尤度の正確さが 0.5（コインと天気）だと、状態がわかっていても観測は半々なので曖昧さが最大（ln 2 ≈ 0.69）になり、情報利得は 0 になります。</p></div>
+  </section>
+  <!-- 逐次更新 -->
+  <section id="sec-seq" hidden>
+    <div class="card pale">
+      <h2>② 何回も観測する：信念はだんだん落ち着く</h2>
+      <p>目の前のものが本当は「カエル」か「リンゴ」かを決めておき、そこから「跳ねる／跳ねない」を1回ずつ観測します。観測のたびにベイズ則で信念を更新し、<b>事後分布が次の事前分布</b>になります。サプライズ（意外さ）とベイズ的サプライズ（信念の書き換え量）が回数とともにどう変わるかを見ます。</p>
+      <p class="muted">スライド「ベイズ則で計算する」「2つの『驚き』」の発展（講師作成）。観測はブラウザ内の乱数で作ります。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <label><b>本当の正体</b>（生き物には見えない）</label>
+        <div class="toggle" id="q-truth"><button data-t="1" class="on">カエル</button><button data-t="0">リンゴ</button></div>
+        <div class="scale"><label>最初の事前分布 P(カエル) ＝ <span id="q-p0v"></span></label><input type="range" id="q-p0" min="1" max="99" value="10"></div>
+        <div class="scale"><label>P(跳ねる | カエル) ＝ <span id="q-lfv"></span></label><input type="range" id="q-lf" min="1" max="99" value="81"></div>
+        <div class="scale"><label>P(跳ねる | リンゴ) ＝ <span id="q-lav"></span></label><input type="range" id="q-la" min="1" max="99" value="20"></div>
+        <button class="btn" id="q-one">1回観測</button><button class="btn" id="q-ten">10回観測</button><button class="btn ghost" id="q-reset">リセット</button>
+        <p id="q-obs" style="font-size:1.3rem;letter-spacing:.1em;word-break:break-all"></p>
+      </div>
+      <div class="card">
+        <div class="kpi" id="q-kpi"></div>
+        <h2>信念 P(カエル) の変化</h2><div id="q-post" class="res"></div>
+        <h2>1回ごとの2つの「驚き」</h2><div id="q-surp" class="res"></div>
+      </div>
+    </div>
+    <div class="card"><p class="note">試してみよう：最初はベイズ的サプライズ（信念の書き換え）が大きく、正体がわかってくると小さくなります。一方、サプライズ（意外さ）は、確信がついた後も観測そのもののばらつきの分だけ残ります。P(跳ねる | リンゴ) を大きくして2つの尤度を近づけると、正体がわかるまでに時間がかかります。</p></div>
+  </section>
+
+  <!-- モデルと世界のずれ -->
+  <section id="sec-gap" hidden>
+    <div class="card pale">
+      <h2>④ モデルと世界のずれ：公園のハトとタカ</h2>
+      <p><b>生成過程</b>（本当の世界）では、鳥がタカである確率は t です。<b>生成モデル</b>（生き物の内側）は、タカの確率を m だと思っています。鳥を観測するたびに、モデルから見たサプライズ −ln P(観測) を記録し、その平均を比べます。平均サプライズは、モデルが世界と一致したときの値（世界のエントロピー）より、ずれ（KL）の分だけ大きくなります。「学習する」をオンにすると、モデルは観測した数からタカの確率を更新します。</p>
+      <p class="muted">スライド「生成過程と生成モデル」に対応（Smith たちのハトとタカの例をもとに講師作成）。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="scale"><label>本当のタカの確率 t ＝ <span id="g-tv"></span></label><input type="range" id="g-t" min="1" max="99" value="30"></div>
+        <div class="scale"><label>モデルが思うタカの確率 m（最初）＝ <span id="g-mv"></span></label><input type="range" id="g-m" min="1" max="99" value="10"></div>
+        <div class="toggle" id="g-learn"><button data-v="0" class="on">学習しない</button><button data-v="1">学習する</button></div>
+        <div style="margin-top:8px"><button class="btn" id="g-go">20羽観測</button><button class="btn" id="g-go2">200羽観測</button><button class="btn ghost" id="g-reset">リセット</button></div>
+        <div class="kpi" id="g-kpi"></div>
+      </div>
+      <div class="card">
+        <h2>平均サプライズの変化</h2><div id="g-plot" class="res"></div>
+        <h2>モデルのタカの確率 m</h2><div id="g-mplot" class="res"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 予測誤差と精度 -->
+  <section id="sec-gauss" hidden>
+    <div class="card pale">
+      <h2>⑦ 予測誤差と精度：連続の量の知覚</h2>
+      <p>体温のような連続の量を考えます。事前の予測は平均 μ<sub>予測</sub>、確かさ（精度）π<sub>予測</sub>の正規分布、感覚は観測値 y、確かさ π<sub>感覚</sub>です。信念 μ は、2つの<b>予測誤差</b>（y − μ と μ − μ<sub>予測</sub>）を精度で重みづけて減らす方向に動き、最後は<b>精度で重みづけた平均</b>に落ち着きます。このとき変分自由エネルギーは F ＝ ½π<sub>感覚</sub>(y − μ)² ＋ ½π<sub>予測</sub>(μ − μ<sub>予測</sub>)²（定数を除く）です。</p>
+      <p class="muted">スライド「どちらを使うかは『確信度』で決まる」「知覚と行動の役割分担」と、Friston (2009) の予測誤差の考え方に対応（講師作成）。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="scale"><label>予測の平均 μ<sub>予測</sub> ＝ <span id="n-mpv"></span></label><input type="range" id="n-mp" min="350" max="400" value="370"></div>
+        <div class="scale"><label>予測の確かさ π<sub>予測</sub> ＝ <span id="n-ppv"></span></label><input type="range" id="n-pp" min="-100" max="100" value="0"></div>
+        <div class="scale"><label>観測値 y ＝ <span id="n-yv"></span></label><input type="range" id="n-y" min="350" max="410" value="390"></div>
+        <div class="scale"><label>感覚の確かさ π<sub>感覚</sub> ＝ <span id="n-psv"></span></label><input type="range" id="n-ps" min="-100" max="100" value="0"></div>
+        <button class="btn" id="n-go">予測誤差で μ を更新</button>
+        <div class="kpi" id="n-kpi"></div>
+      </div>
+      <div class="card">
+        <h2>予測・感覚・信念の分布</h2><div id="n-dist" class="res"></div>
+        <h2>更新中の μ と F</h2><div id="n-traj" class="res"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- オッカム -->
+  <section id="sec-occam" hidden>
+    <div class="card pale">
+      <h2>⑧ 単純さと正確さ：どちらのモデルが良い？</h2>
+      <p>コインを投げたデータを、2つのモデルで説明します。<b>単純なモデル</b>は「表と裏は半々」と決めつけ、<b>複雑なモデル</b>は「表の確率 θ はわからない（0〜1のどれでも同じくらい）」と考えます。それぞれの F ＝ 複雑さ − 正確さ（＝ −ln 証拠）を比べ、F が小さいほうが良いモデルです。</p>
+      <p class="muted">スライド「①エネルギーと②複雑さで読む」「モデルを比べる」に対応（講師作成）。複雑なモデルの事前分布は一様分布。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="scale"><label>本当の表の確率 ＝ <span id="o-bv"></span></label><input type="range" id="o-b" min="0" max="100" value="50"></div>
+        <button class="btn" id="o-ten">10回投げる</button><button class="btn" id="o-hund">100回投げる</button><button class="btn ghost" id="o-reset">リセット</button>
+        <div class="kpi" id="o-kpi"></div>
+        <table id="o-tab"></table>
+      </div>
+      <div class="card">
+        <h2>F の比較（小さいほど良い）</h2><div id="o-bars" class="res"></div>
+        <h2>投げた回数と F の差（単純 − 複雑）</h2><div id="o-line" class="res"></div>
+        <p class="muted">差がプラス＝複雑なモデルの勝ち、マイナス＝単純なモデルの勝ち。</p>
+      </div>
+    </div>
+    <div class="card"><p class="note">試してみよう：本当の確率を 0.5 にすると、データが増えるほど単純なモデルが勝ちます（余計な自由度の「複雑さ」が損になる）。0.7 や 0.9 にすると、最初は単純なモデルが勝っていても、データが増えると複雑なモデルが勝ちます（正確さの得が上回る）。</p></div>
+  </section>
+
+  <!-- γ -->
+  <section id="sec-gamma" hidden>
+    <div class="card pale">
+      <h2>⑩ 方策の確率と精度 γ</h2>
+      <p>3つの方策の期待自由エネルギー G を決め、P(π) ∝ exp(−γ G) で選ばれる確率を計算します。γ が大きいほど G の最も小さい方策ばかり選び、γ が小さいほどでたらめに近くなります。「100回選ぶ」で実際に選んでみた回数も比べます。</p>
+      <p class="muted">スライド「方策を『推論』で選ぶ」に対応（講師作成）。γ ＝ 1 がスライドの計算。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="scale"><label>G(方策A) ＝ <span id="y-1v"></span></label><input type="range" id="y-1" min="0" max="50" value="10"></div>
+        <div class="scale"><label>G(方策B) ＝ <span id="y-2v"></span></label><input type="range" id="y-2" min="0" max="50" value="20"></div>
+        <div class="scale"><label>G(方策C) ＝ <span id="y-3v"></span></label><input type="range" id="y-3" min="0" max="50" value="30"></div>
+        <div class="scale"><label>精度 γ ＝ <span id="y-gv"></span></label><input type="range" id="y-g" min="-100" max="100" value="0"><div class="ends"><span>でたらめに近い</span><span>いつも最善</span></div></div>
+        <button class="btn" id="y-go">100回選ぶ</button>
+      </div>
+      <div class="card">
+        <h2>選ばれる確率</h2><div id="y-bars" class="res"></div>
+        <h2>100回選んだ結果</h2><div id="y-hist" class="res"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- エスプレッソ -->
+  <section id="sec-cafe" hidden>
+    <div class="card pale">
+      <h2>⑪ エスプレッソと曜日：まず情報、それから報酬</h2>
+      <p>平日だけ開くカフェと週末だけ開くカフェがあります。今日が平日だという信念を決めて、3つの方策の期待自由エネルギーを比べます。どの方策も2ステップです：<br>A：平日のカフェへ行き、そこにいる／B：週末のカフェへ行き、そこにいる／C：まずカレンダーを見て（1ステップ目は何も飲めない）、開いているカフェへ行く。</p>
+      <p class="muted">スライド「エスプレッソの例」に対応。2ステップの設定と好みの値は講師が作った簡単なモデル。</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="scale"><label>「今日は平日」という信念 ＝ <span id="c-pv"></span></label><input type="range" id="c-p" min="0" max="100" value="50"><div class="ends"><span>週末だと確信</span><span>平日だと確信</span></div></div>
+        <div class="scale"><label>好み：エスプレッソ ＝ <span id="c-ev"></span></label><input type="range" id="c-e" min="0" max="60" value="30"></div>
+        <div class="scale"><label>好み：閉まった店の前 ＝ <span id="c-cv"></span></label><input type="range" id="c-c" min="-40" max="0" value="-20"></div>
+        <div class="scale"><label>方策の精度 γ ＝ <span id="c-gv"></span></label><input type="range" id="c-g" min="1" max="50" value="10"></div>
+        <p class="muted">好みは対数の重み（「何もなし」は 0）。softmax で P(o | C) に変換。</p>
+      </div>
+      <div class="card">
+        <div id="c-bars" class="res"></div>
+        <table id="c-tab"></table>
+      </div>
+    </div>
+    <div class="card"><p class="note">試してみよう：信念が 0.5（曜日がまったくわからない）だとカレンダーを見る方策 C が選ばれます。信念を 0.95 にすると、カレンダーを見る手間が惜しくなり、すぐ平日のカフェへ行く A が選ばれます。どの方策でも最初の観測で曜日がわかるので情報利得は同じで、差をつけているのは実用的価値です。</p></div>
+  </section>
+</div>
+
+<script>
+// ===== 共通の小道具（講師作成） =====
+function $(s, r) { return (r || document).querySelector(s); }
+function el(tag, attrs, kids) {
+  var e = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(function (k) {
+    if (k === 'text') e.textContent = attrs[k];
+    else if (k === 'html') e.innerHTML = attrs[k];
+    else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  });
+  (kids || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return e;
+}
+function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function mean(a) { return a.length ? a.reduce(function (s, x) { return s + x; }, 0) / a.length : NaN; }
+function corr(x, y) {
+  var n = x.length; if (n < 3) return NaN;
+  var mx = mean(x), my = mean(y), sxy = 0, sxx = 0, syy = 0;
+  for (var i = 0; i < n; i++) { sxy += (x[i] - mx) * (y[i] - my); sxx += (x[i] - mx) * (x[i] - mx); syy += (y[i] - my) * (y[i] - my); }
+  return sxx && syy ? sxy / Math.sqrt(sxx * syy) : NaN;
+}
+function fmt(x, d) { return isFinite(x) ? Number(x).toFixed(d === undefined ? 2 : d) : '—'; }
+function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function rng(seed) { return function () { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+// CSV を保存（ローカルで開いたファイルで動作）
+function saveCSV(name, header, rows) {
+  var csv = '﻿' + [header].concat(rows).map(function (r) { return r.map(function (v) { var s = String(v === undefined || v === null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(','); }).join('\n');
+  var a = el('a', { href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), download: name });
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// 1〜K のボタン
+function points(label, K, left, right, onchange) {
+  var val = null, btns = [];
+  var row = el('div', { class: 'pts' });
+  for (var i = 1; i <= K; i++) {
+    (function (k) {
+      var b = el('button', { type: 'button', text: String(k), onclick: function () { val = k; btns.forEach(function (x, j) { x.classList.toggle('on', j + 1 === k); }); onchange && onchange(k); } });
+      btns.push(b); row.appendChild(b);
+    })(i);
+  }
+  var box = el('div', { class: 'scale' }, [label ? el('label', { text: label }) : null, row,
+    el('div', { class: 'ends' }, [el('span', { text: '1 ' + left }), el('span', { text: right + ' ' + K })])]);
+  box.value = function () { return val; };
+  return box;
+}
+
+// ---- SVG のグラフ
+var INK = '#1f2933', GRID = '#dde2e6';
+function axisFrame(W, H, m, ymin, ymax, ylab, xlab, yticks) {
+  var s = '';
+  var ph = H - m.t - m.b;
+  (yticks || []).forEach(function (v) {
+    var y = m.t + ph * (1 - (v - ymin) / (ymax - ymin));
+    s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + y + '" y2="' + y + '" stroke="' + GRID + '"/>';
+    s += '<text x="' + (m.l - 6) + '" y="' + (y + 4) + '" font-size="12" text-anchor="end" fill="' + INK + '">' + v + '</text>';
+  });
+  s += '<line x1="' + m.l + '" x2="' + m.l + '" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="' + INK + '"/>';
+  s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + (H - m.b) + '" y2="' + (H - m.b) + '" stroke="' + INK + '"/>';
+  if (ylab) s += '<text transform="translate(14,' + (m.t + ph / 2) + ') rotate(-90)" font-size="12" text-anchor="middle" fill="' + INK + '">' + esc(ylab) + '</text>';
+  if (xlab) s += '<text x="' + (m.l + (W - m.l - m.r) / 2) + '" y="' + (H - 6) + '" font-size="12" text-anchor="middle" fill="' + INK + '">' + esc(xlab) + '</text>';
+  return s;
+}
+function ticks(a, b, n) { var out = [], st = (b - a) / n; for (var i = 0; i <= n; i++) out.push(Math.round((a + st * i) * 100) / 100); return out; }
+function barChart(o) {
+  var W = o.w || 520, H = o.h || 280, m = { l: 48, r: 12, t: 14, b: 56 };
+  var pw = W - m.l - m.r, ph = H - m.t - m.b, n = o.labels.length, bw = pw / n;
+  var s = axisFrame(W, H, m, o.ymin, o.ymax, o.ylab, o.xlab, ticks(o.ymin, o.ymax, 4));
+  var y0 = m.t + ph * (1 - (0 - o.ymin) / (o.ymax - o.ymin));
+  if (o.ymin < 0) s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + y0 + '" y2="' + y0 + '" stroke="' + INK + '"/>';
+  o.labels.forEach(function (lab, i) {
+    var v = o.vals[i], x = m.l + bw * i + bw * 0.18;
+    if (isFinite(v)) {
+      var y = m.t + ph * (1 - (v - o.ymin) / (o.ymax - o.ymin));
+      var base = o.ymin < 0 ? y0 : H - m.b;
+      s += '<rect x="' + x + '" y="' + Math.min(y, base) + '" width="' + bw * 0.64 + '" height="' + Math.abs(base - y) + '" fill="' + ((o.colors && o.colors[i]) || '#1f3a5f') + '"/>';
+      s += '<text x="' + (x + bw * 0.32) + '" y="' + (Math.min(y, base) - 4) + '" font-size="12" text-anchor="middle" fill="' + INK + '">' + fmt(v, o.dec === undefined ? 1 : o.dec) + '</text>';
+    }
+    s += '<text x="' + (m.l + bw * (i + 0.5)) + '" y="' + (H - m.b + 16) + '" font-size="12" text-anchor="middle" fill="' + INK + '">' + esc(lab) + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img">' + s + '</svg>';
+}
+function lineChart(o) {
+  var W = o.w || 520, H = o.h || 280, m = { l: 48, r: 12, t: 14, b: 56 };
+  var pw = W - m.l - m.r, ph = H - m.t - m.b;
+  var s = axisFrame(W, H, m, o.ymin, o.ymax, o.ylab, o.xlab, o.yticks || ticks(o.ymin, o.ymax, 4));
+  var xs = o.x, xmin = o.xmin !== undefined ? o.xmin : Math.min.apply(null, xs), xmax = o.xmax !== undefined ? o.xmax : Math.max.apply(null, xs);
+  function X(v) { return m.l + pw * (v - xmin) / (xmax - xmin); }
+  function Y(v) { return m.t + ph * (1 - (Math.max(o.ymin, Math.min(o.ymax, v)) - o.ymin) / (o.ymax - o.ymin)); }
+  (o.xticks || []).forEach(function (t) { s += '<text x="' + X(t[0]) + '" y="' + (H - m.b + 16) + '" font-size="12" text-anchor="middle" fill="' + INK + '">' + esc(t[1]) + '</text>'; });
+  var ly = 0;
+  o.series.forEach(function (se) {
+    var d = '';
+    se.vals.forEach(function (v, i) { if (isFinite(v)) d += (d ? 'L' : 'M') + X(xs[i]).toFixed(1) + ',' + Y(v).toFixed(1); });
+    s += '<path d="' + d + '" fill="none" stroke="' + se.color + '" stroke-width="' + (se.w || 2.5) + '"' + (se.dash ? ' stroke-dasharray="6 4"' : '') + '/>';
+    if (se.dots) se.vals.forEach(function (v, i) { if (isFinite(v)) s += '<circle cx="' + X(xs[i]) + '" cy="' + Y(v) + '" r="4.5" fill="' + se.color + '"/>'; });
+    var lx = o.legendLeft ? m.l + 12 : W - m.r - 150, ly0 = o.legendMid ? m.t + ph / 2 - 10 : m.t + 4;
+    if (se.name) { s += '<rect x="' + lx + '" y="' + (ly0 + ly) + '" width="14" height="4" fill="' + se.color + '"/><text x="' + (lx + 20) + '" y="' + (ly0 + 6 + ly) + '" font-size="12" fill="' + INK + '">' + esc(se.name) + '</text>'; ly += 16; }
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img">' + s + '</svg>';
+}
+
+// ---- 自動生成の抽象パターン（複雑さ1〜8）
+var PALETTE = ['#1f3a5f', '#e8892b', '#2a9d8f', '#c8372d', '#7b5ea7', '#e9c46a', '#264653', '#8d99ae'];
+function abstractSVG(level, seed) {
+  var r = rng(seed * 7919 + level * 104729), s = '';
+  var nShapes = [1, 2, 4, 7, 11, 16, 24, 34][level - 1];
+  var nColors = Math.min(PALETTE.length, 1 + Math.ceil(level * 0.9));
+  var sym = level <= 3;
+  for (var i = 0; i < nShapes; i++) {
+    var col = PALETTE[Math.floor(r() * nColors)];
+    var kind = r(), x = 30 + r() * 240, y = 30 + r() * 240, sz = 20 + r() * (level <= 2 ? 120 : 70), shp;
+    if (kind < 0.35) shp = '<circle cx="' + x + '" cy="' + y + '" r="' + sz / 2 + '" fill="' + col + '" opacity=".85"/>';
+    else if (kind < 0.65) shp = '<rect x="' + (x - sz / 2) + '" y="' + (y - sz / 2) + '" width="' + sz + '" height="' + (sz * (0.4 + r())) + '" fill="' + col + '" opacity=".85" transform="rotate(' + Math.round(r() * (level > 4 ? 90 : 0)) + ' ' + x + ' ' + y + ')"/>';
+    else {
+      var pts = [], k = 3 + Math.floor(r() * (level > 4 ? 5 : 2));
+      for (var j = 0; j < k; j++) pts.push((x + (r() - 0.5) * sz * 1.6).toFixed(1) + ',' + (y + (r() - 0.5) * sz * 1.6).toFixed(1));
+      shp = '<polygon points="' + pts.join(' ') + '" fill="' + col + '" opacity=".85"/>';
+    }
+    s += shp;
+    if (sym) s += '<g transform="translate(300,0) scale(-1,1)">' + shp + '</g>';
+  }
+  var nLines = level >= 4 ? (level - 3) * 6 : 0;
+  for (var m = 0; m < nLines; m++) s += '<line x1="' + r() * 300 + '" y1="' + r() * 300 + '" x2="' + r() * 300 + '" y2="' + r() * 300 + '" stroke="' + PALETTE[Math.floor(r() * nColors)] + '" stroke-width="' + (1 + r() * 4).toFixed(1) + '"/>';
+  return '<svg viewBox="0 0 300 300" width="100%" height="100%" role="img" aria-label="抽象パターン"><rect width="300" height="300" fill="#fbfaf6"/>' + s + '</svg>';
+}
+
+// タブ切り替え
+function tabs(ids) {
+  ids.forEach(function (id) {
+    $('#tab-' + id).onclick = function () {
+      ids.forEach(function (j) { $('#sec-' + j).hidden = j !== id; $('#tab-' + j).classList.toggle('on', j === id); });
+      window.scrollTo(0, 0);
+    };
+  });
+}
+
+// ===== 数学の小道具（講師作成） =====
+function lgamma(x) { // Lanczos
+  if (x < 0.5) return Math.log(Math.PI / Math.abs(Math.sin(Math.PI * x))) - lgamma(1 - x);
+  var g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  x -= 1; var a = c[0], t = x + g + 0.5;
+  for (var i = 1; i < 9; i++) a += c[i] / (x + i);
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+function lbeta(a, b) { return lgamma(a) + lgamma(b) - lgamma(a + b); }
+function lse(a) { var m = Math.max.apply(null, a); if (!isFinite(m)) return m; var s = 0; for (var i = 0; i < a.length; i++) s += Math.exp(a[i] - m); return m + Math.log(s); }
+function normalize(a) { var s = a.reduce(function (x, y) { return x + y; }, 0); return a.map(function (x) { return x / s; }); }
+function expNorm(la) { var z = lse(la); return la.map(function (x) { return Math.exp(x - z); }); }
+function gauss(r) { var u = 0, v = 0; while (u === 0) u = r(); v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function zeros(n, m) { var A = []; for (var i = 0; i < n; i++) { A.push(new Array(m === undefined ? n : m).fill(0)); } return A; }
+function chol(A) { // returns L or null
+  var n = A.length, L = zeros(n);
+  for (var i = 0; i < n; i++) for (var j = 0; j <= i; j++) {
+    var s = A[i][j];
+    for (var k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+    if (i === j) { if (s <= 1e-12) return null; L[i][i] = Math.sqrt(s); } else L[i][j] = s / L[j][j];
+  }
+  return L;
+}
+function inv(A) { // Gauss-Jordan
+  var n = A.length, M = A.map(function (r, i) { return r.concat(Array.from({ length: n }, function (_, j) { return i === j ? 1 : 0; })); });
+  for (var c = 0; c < n; c++) {
+    var p = c; for (var r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    var t = M[c]; M[c] = M[p]; M[p] = t;
+    var d = M[c][c]; for (var j = 0; j < 2 * n; j++) M[c][j] /= d;
+    for (var r2 = 0; r2 < n; r2++) if (r2 !== c) { var f = M[r2][c]; if (f) for (var j2 = 0; j2 < 2 * n; j2++) M[r2][j2] -= f * M[c][j2]; }
+  }
+  return M.map(function (r) { return r.slice(n); });
+}
+function sigm(x) { return 1 / (1 + Math.exp(-x)); }
+function pct(x, d) { return isFinite(x) ? (100 * x).toFixed(d === undefined ? 0 : d) + '%' : '—'; }
+
+// ===== 能動的推論への「常道」デモ（講師作成） =====
+var L = Math.log, NAVY = '#1f3a5f', ORANGE = '#e8892b', PALE = '#9fb8cf', GRAYC = '#8d99ae';
+function H2(p) { var s = 0; [p, 1 - p].forEach(function (x) { if (x > 0) s -= x * L(x); }); return s; }
+function Hv(a) { var s = 0; a.forEach(function (x) { if (x > 0) s -= x * L(x); }); return s; }
+function KLv(q, p) { var s = 0; for (var i = 0; i < q.length; i++) { if (q[i] > 0) { if (p[i] <= 0) return Infinity; s += q[i] * (L(q[i]) - L(p[i])); } } return s; }
+function nf(x, d) { if (x === Infinity) return '∞'; if (x === -Infinity) return '−∞'; return isFinite(x) ? Number(x).toFixed(d === undefined ? 2 : d).replace('-', '−') : '—'; }
+function kpi(id, items) { $(id).innerHTML = items.map(function (it) { return '<div>' + esc(it[0]) + '<b>' + it[1] + '</b></div>'; }).join(''); }
+function toggleGroup(id, cb) {
+  var bs = Array.prototype.slice.call(document.querySelectorAll(id + ' button'));
+  bs.forEach(function (b) { b.addEventListener('click', function () { bs.forEach(function (x) { x.classList.toggle('on', x === b); }); cb(b); }); });
+}
+function setOn(id, sel) { document.querySelectorAll(id + ' button').forEach(function (b) { b.classList.toggle('on', b.matches(sel)); }); }
+function rv(id) { return +$(id).value; }
+function logSlider(v, lo, hi) { return Math.exp(L(lo) + (L(hi) - L(lo)) * (v + 100) / 200); }
+function invLog(x, lo, hi) { return Math.round((L(x) - L(lo)) / (L(hi) - L(lo)) * 200 - 100); }
+
+// ---- 共有モデル（①で決める）
+var M = { p0: 0.1, lf: 0.81, la: 0.01, obs: 1 };
+function model() {
+  var py_f = M.obs ? M.lf : 1 - M.lf, py_a = M.obs ? M.la : 1 - M.la;
+  var jf = M.p0 * py_f, ja = (1 - M.p0) * py_a, py = jf + ja;
+  return { py_f: py_f, py_a: py_a, jf: jf, ja: ja, py: py, post: py > 0 ? jf / py : NaN };
+}
+
+// ================= ① ベイズ =================
+function bayesDraw() {
+  M.p0 = rv('#b-p0') / 100; M.lf = rv('#b-lf') / 100; M.la = rv('#b-la') / 100;
+  $('#b-p0v').textContent = fmt(M.p0, 2); $('#b-lfv').textContent = fmt(M.lf, 2); $('#b-lav').textContent = fmt(M.la, 2);
+  var m = model(), ob = M.obs ? '跳ねる' : '跳ねない';
+  var ok = m.py > 0;
+  $('#b-bars').innerHTML = barChart({ labels: ['リンゴ（事前）', 'カエル（事前）', 'リンゴ（事後）', 'カエル（事後）'], vals: ok ? [1 - M.p0, M.p0, 1 - m.post, m.post] : [1 - M.p0, M.p0, NaN, NaN], ymin: 0, ymax: 1, dec: 2, colors: [NAVY, ORANGE, NAVY, ORANGE], ylab: '確率' });
+  var S = ok ? -L(m.py) : Infinity;
+  var BS = ok ? KLv([m.post, 1 - m.post], [M.p0, 1 - M.p0]) : NaN;
+  kpi('#b-kpi', [['P(' + ob + ')', nf(m.py, 3)], ['サプライズ −ln P(y)', nf(S) + ' nats'], ['ベイズ的サプライズ', ok ? nf(BS) + ' nats' : '—']]);
+  var s = '<p>① 周辺化：P(' + ob + ') ＝ P(カエル)P(' + ob + '|カエル) ＋ P(リンゴ)P(' + ob + '|リンゴ) ＝ ' + fmt(M.p0, 2) + '×' + fmt(m.py_f, 2) + ' ＋ ' + fmt(1 - M.p0, 2) + '×' + fmt(m.py_a, 2) + ' ＝ ' + fmt(m.jf, 4) + ' ＋ ' + fmt(m.ja, 4) + ' ＝ <b>' + fmt(m.py, 4) + '</b></p>';
+  if (ok) {
+    s += '<p>② ベイズ則：P(カエル|' + ob + ') ＝ ' + fmt(m.jf, 4) + ' ／ ' + fmt(m.py, 4) + ' ＝ <b>' + fmt(m.post, 3) + '</b></p>';
+    s += '<p>③ サプライズ：−ln ' + fmt(m.py, 4) + ' ＝ <b>' + nf(S) + ' nats</b>（観測がどれだけありそうになかったか）</p>';
+    s += '<p>④ ベイズ的サプライズ：KL[事後‖事前] ＝ <b>' + nf(BS) + ' nats</b>（信念がどれだけ書き換わったか）</p>';
+  } else s += '<p class="note">このモデルでは、この観測は起こりえません（確率0）。サプライズは無限大で、事後分布は決まりません。</p>';
+  $('#b-steps').innerHTML = s;
+}
+function bayesInit() {
+  ['#b-p0', '#b-lf', '#b-la'].forEach(function (id) { $(id).addEventListener('input', function () { setOn('#b-preset', '.none'); bayesDraw(); }); });
+  toggleGroup('#b-obs', function (b) { M.obs = +b.dataset.o; bayesDraw(); });
+  toggleGroup('#b-preset', function (b) {
+    var P = { book: [10, 81, 1], apple: [0, 81, 1], frog: [100, 81, 1] }[b.dataset.p];
+    $('#b-p0').value = P[0]; $('#b-lf').value = P[1]; $('#b-la').value = P[2]; M.obs = 1; setOn('#b-obs', '[data-o="1"]'); bayesDraw();
+  });
+  bayesDraw();
+}
+
+// ================= ② KL =================
+function klDraw() {
+  var q = rv('#k-q') / 100, p = rv('#k-p') / 100;
+  $('#k-qv').textContent = fmt(q, 2); $('#k-pv').textContent = fmt(p, 2);
+  $('#k-bars').innerHTML = barChart({ labels: ['Q(状態1)', 'Q(状態2)', 'P(状態1)', 'P(状態2)'], vals: [q, 1 - q, p, 1 - p], ymin: 0, ymax: 1, dec: 2, colors: [NAVY, NAVY, ORANGE, ORANGE], h: 230 });
+  var a = KLv([q, 1 - q], [p, 1 - p]), b = KLv([p, 1 - p], [q, 1 - q]);
+  kpi('#k-kpi', [['KL[Q‖P]', nf(a, 3)], ['KL[P‖Q]', nf(b, 3)], ['差', isFinite(a) && isFinite(b) ? nf(a - b, 3) : '—']]);
+  var xs = [], s1 = [], s2 = [], cur = [];
+  for (var i = 1; i < 100; i++) { var x = i / 100; xs.push(x); s1.push(KLv([x, 1 - x], [p, 1 - p])); s2.push(KLv([p, 1 - p], [x, 1 - x])); cur.push(Math.abs(x - q) < 0.005 ? KLv([x, 1 - x], [p, 1 - p]) : NaN); }
+  $('#k-curve').innerHTML = lineChart({ x: xs, xmin: 0, xmax: 1, ymin: 0, ymax: 3, ylab: 'nats', xlab: 'Q(状態1)', xticks: [[0, '0'], [0.5, '0.5'], [1, '1']],
+    series: [{ name: 'KL[Q‖P]', vals: s1, color: NAVY }, { name: 'KL[P‖Q]', vals: s2, color: ORANGE, dash: true }, { vals: cur, color: NAVY, dots: true, w: 0 }] });
+}
+function klInit() {
+  ['#k-q', '#k-p'].forEach(function (id) { $(id).addEventListener('input', function () { setOn('#k-preset', '.none'); klDraw(); }); });
+  toggleGroup('#k-preset', function (b) { var P = { ex: [50, 90], mir: [10, 90], same: [70, 70], zero: [30, 0] }[b.dataset.p]; $('#k-q').value = P[0]; $('#k-p').value = P[1]; klDraw(); });
+  klDraw();
+}
+
+// ================= ③ VFE =================
+function Fparts(q, m) {
+  var Q = [q, 1 - q], J = [m.jf, m.ja], pr = [M.p0, 1 - M.p0], lik = [m.py_f, m.py_a], po = [m.post, 1 - m.post];
+  var energy = 0, acc = 0;
+  for (var i = 0; i < 2; i++) if (Q[i] > 0) { energy += Q[i] * (J[i] > 0 ? -L(J[i]) : Infinity); acc += Q[i] * (lik[i] > 0 ? L(lik[i]) : -Infinity); }
+  var ent = H2(q), cx = KLv(Q, pr), div = KLv(Q, po), S = -L(m.py);
+  return { F: energy - ent, energy: energy, ent: ent, cx: cx, acc: acc, div: div, S: S };
+}
+var vPath = [];
+function vfeDraw() {
+  var m = model(), q = rv('#v-q') / 100;
+  $('#v-qv').textContent = fmt(q, 2);
+  if (!(m.py > 0) || m.jf <= 0 || m.ja <= 0) {
+    $('#v-warn').textContent = '①のモデルでは一方の状態の同時確率が0なので、このタブの曲線は描けません。①で「スライドの例」に戻してください。';
+    $('#v-curve').innerHTML = ''; $('#v-stack').innerHTML = ''; $('#v-tab').innerHTML = ''; kpi('#v-kpi', []); return;
+  }
+  $('#v-warn').textContent = '観測：' + (M.obs ? '跳ねた' : '跳ねなかった') + '　本当の事後分布 P(カエル|y) ＝ ' + fmt(m.post, 3);
+  var f = Fparts(q, m);
+  var xs = [], F = [], Sx = [], cur = [], path = [];
+  for (var i = 1; i < 100; i++) { var x = i / 100; xs.push(x); F.push(Fparts(x, m).F); Sx.push(f.S); cur.push(Math.abs(x - q) < 0.005 ? f.F : NaN); path.push(NaN); }
+  var ymax = Math.max(1, Math.ceil(Math.max.apply(null, F.filter(isFinite)) + 0.5)); ymax = Math.min(ymax, 10);
+  $('#v-curve').innerHTML = lineChart({ x: xs, xmin: 0, xmax: 1, ymin: 0, ymax: ymax, ylab: 'nats', xlab: 'Q(カエル)', xticks: [[0, '0'], [0.5, '0.5'], [1, '1']], legendLeft: false,
+    series: [{ name: 'F[Q]', vals: F, color: NAVY }, { name: 'サプライズ', vals: Sx, color: ORANGE, dash: true }, { vals: cur, color: ORANGE, dots: true, w: 0 }] });
+  kpi('#v-kpi', [['F', nf(f.F, 3)], ['サプライズ', nf(f.S, 3)], ['F − サプライズ', nf(f.F - f.S, 3)]]);
+  // stacked bar
+  var W = 520, Hh = 90, sc = (W - 40) / Math.max(f.F, 0.01);
+  var a = f.S * sc, b = f.div * sc;
+  $('#v-stack').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" width="100%"><rect x="20" y="20" width="' + a + '" height="36" fill="' + NAVY + '"/><rect x="' + (20 + a) + '" y="20" width="' + Math.max(b, 0) + '" height="36" fill="' + ORANGE + '"/>'
+    + '<text x="' + (20 + a / 2) + '" y="44" fill="#fff" font-size="13" text-anchor="middle">サプライズ ' + nf(f.S) + '</text>'
+    + '<text x="' + Math.min(20 + a + b / 2, W - 60) + '" y="76" fill="' + ORANGE + '" font-size="13" text-anchor="middle">ダイバージェンス ' + nf(f.div) + '</text></svg>';
+  $('#v-tab').innerHTML = '<tr><th>書き方</th><th>項1</th><th>項2</th><th>F</th></tr>'
+    + '<tr><td>エネルギー − エントロピー</td><td>' + nf(f.energy) + '</td><td>− ' + nf(f.ent) + '</td><td><b>' + nf(f.energy - f.ent) + '</b></td></tr>'
+    + '<tr><td>複雑さ − 正確さ</td><td>' + nf(f.cx) + '</td><td>− (' + nf(f.acc) + ')</td><td><b>' + nf(f.cx - f.acc) + '</b></td></tr>'
+    + '<tr><td>ダイバージェンス ＋ サプライズ</td><td>' + nf(f.div) + '</td><td>＋ ' + nf(f.S) + '</td><td><b>' + nf(f.div + f.S) + '</b></td></tr>';
+}
+var vTimer = null;
+function vfeInit() {
+  $('#v-q').addEventListener('input', vfeDraw);
+  $('#v-reset').onclick = function () { if (vTimer) clearInterval(vTimer); $('#v-q').value = Math.min(99, Math.max(1, Math.round(M.p0 * 100))); vfeDraw(); };
+  $('#v-gd').onclick = function () {
+    var m = model(); if (!(m.jf > 0 && m.ja > 0)) return;
+    if (vTimer) clearInterval(vTimer);
+    var q = rv('#v-q') / 100, th = L(q / (1 - q)), n = 0;
+    vTimer = setInterval(function () {
+      var qq = 1 / (1 + Math.exp(-th));
+      var dFdq = (L(qq) - L(m.jf)) - (L(1 - qq) - L(m.ja));
+      th -= 0.6 * dFdq * qq * (1 - qq) * 4;
+      qq = 1 / (1 + Math.exp(-th));
+      $('#v-q').value = Math.min(99, Math.max(1, Math.round(qq * 100)));
+      vfeDraw();
+      if (++n > 40 || Math.abs(dFdq) < 0.01) clearInterval(vTimer);
+    }, 120);
+  };
+}
+
+// ================= ④ Boltzmann =================
+function boltzDraw() {
+  var T = logSlider(rv('#z-t'), 0.1, 10); $('#z-tv').textContent = fmt(T, 2);
+  var m = model();
+  if (!(m.jf > 0 && m.ja > 0)) { $('#z-levels').innerHTML = '<p class="note">①のモデルでは一方の状態の同時確率が0なので描けません。①で「スライドの例」に戻してください。</p>'; return; }
+  var Ef = -L(m.jf), Ea = -L(m.ja);
+  var wf = Math.exp(-Ef / T), wa = Math.exp(-Ea / T), Z = wf + wa, pf = wf / Z, pa = wa / Z;
+  var U = pf * Ef + pa * Ea, S = H2(pf), F = U - T * S;
+  kpi('#z-kpi', [['P(カエル)', nf(pf, 3)], ['平均エネルギー U', nf(U)], ['エントロピー S', nf(S)], ['F ＝ U − T S', nf(F, 3)], ['−T ln Z', nf(-T * L(Z), 3)], ['サプライズ（T＝1の値）', nf(-L(m.py), 3)]]);
+  // energy levels
+  var W = 520, Hh = 300, top = 30, bot = 270, Emax = Math.max(Ef, Ea) * 1.15 + 0.2;
+  function Y(e) { return bot - (bot - top) * e / Emax; }
+  var s = '<line x1="50" y1="' + bot + '" x2="' + (W - 10) + '" y2="' + bot + '" stroke="#1f2933"/><line x1="50" y1="' + bot + '" x2="50" y2="' + top + '" stroke="#1f2933"/><text x="20" y="' + (top + 10) + '" font-size="13">E</text>';
+  [['カエル', Ef, pf], ['リンゴ', Ea, pa]].forEach(function (r) {
+    var y = Y(r[1]);
+    s += '<line x1="80" y1="' + y + '" x2="360" y2="' + y + '" stroke="' + NAVY + '" stroke-width="3"/>';
+    s += '<text x="370" y="' + (y + 5) + '" font-size="13" font-weight="700">' + r[0] + '　E＝' + fmt(r[1], 2) + '</text>';
+    var n = Math.round(r[2] * 20);
+    for (var i = 0; i < n; i++) s += '<circle cx="' + (92 + i * 13.5) + '" cy="' + (y - 8) + '" r="6" fill="' + ORANGE + '"/>';
+  });
+  s += '<text x="' + (W / 2) + '" y="' + (Hh - 6) + '" font-size="12" text-anchor="middle">点の数＝確率 ×20（E ＝ −ln P(y, x)）</text>';
+  $('#z-levels').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" width="100%">' + s + '</svg>';
+  var xs = [], v = [], cur = [], one = [];
+  for (var i = 0; i <= 100; i++) { var t = Math.exp(L(0.1) + (L(10) - L(0.1)) * i / 100); xs.push(L(t) / L(10)); var a = Math.exp(-Ef / t), b = Math.exp(-Ea / t); v.push(a / (a + b)); cur.push(Math.abs(t - T) / T < 0.024 ? a / (a + b) : NaN); one.push(NaN); }
+  $('#z-curve').innerHTML = lineChart({ x: xs, xmin: -1, xmax: 1, ymin: 0, ymax: 1, ylab: 'P(カエル)', xlab: '温度 T（対数目盛）', xticks: [[-1, '0.1'], [0, '1'], [1, '10']],
+    series: [{ vals: v, color: NAVY }, { vals: cur, color: ORANGE, dots: true, w: 0 }] }).replace('</svg>', '<line x1="' + (48 + (520 - 60) / 2) + '" x2="' + (48 + (520 - 60) / 2) + '" y1="14" y2="224" stroke="' + ORANGE + '" stroke-dasharray="5 4"/></svg>');
+}
+function boltzInit() { $('#z-t').addEventListener('input', boltzDraw); $('#z-one').onclick = function () { $('#z-t').value = 0; boltzDraw(); }; }
+
+// ================= ⑤ 知覚か行動か =================
+var aAct = 1, aAnim = null;
+function actLabels() {
+  $('#a-ppv').textContent = fmt(logSlider(rv('#a-pp'), 0.05, 20), 2);
+  $('#a-psv').textContent = fmt(logSlider(rv('#a-ps'), 0.05, 20), 2);
+  $('#a-hv').textContent = fmt(rv('#a-h') / 10, 1) + ' ℃';
+}
+function actSim() {
+  var pp = logSlider(rv('#a-pp'), 0.05, 20), ps = logSlider(rv('#a-ps'), 0.05, 20), hot = rv('#a-h') / 10, eta = 37;
+  var dt = 0.02, Tend = 40, w = 37, mu = 37, out = { t: [], w: [], mu: [], amb: [] }, cum = 0;
+  for (var k = 0; k * dt <= Tend; k++) {
+    var t = k * dt, amb = t < 5 ? 37 : hot;
+    var s = w;
+    var dmu = 2 * (ps * (s - mu) - pp * (mu - eta));
+    var act = aAct ? -0.8 * ps * (s - mu) : 0;
+    w += dt * ((amb - w) / 4 + act); mu += dt * dmu; cum += Math.abs(act) * dt;
+    if (k % 10 === 0) { out.t.push(t); out.w.push(w); out.mu.push(mu); out.amb.push(amb); }
+  }
+  out.cum = cum; out.pp = pp; out.ps = ps; return out;
+}
+function actPlot(o, n) {
+  var cut = function (a) { return a.map(function (v, i) { return i < n ? v : NaN; }); };
+  var eta = o.t.map(function () { return 37; });
+  $('#a-plot').innerHTML = lineChart({ x: o.t, xmin: 0, xmax: 40, ymin: 36.5, ymax: 42.5, yticks: [37, 38, 39, 40, 41, 42], ylab: '℃', xlab: '時間', xticks: [[0, '0'], [5, '暑くなる'], [20, '20'], [40, '40']], legendLeft: true,
+    series: [{ name: '外の暑さ', vals: cut(o.amb), color: GRAYC, w: 1.5 }, { name: '体の温度＝感覚 s', vals: cut(o.w), color: ORANGE }, { name: '信念 μ', vals: cut(o.mu), color: NAVY }, { name: '予測 37 ℃', vals: eta, color: NAVY, dash: true, w: 1.2 }] });
+  if (n >= o.t.length) {
+    var i = o.t.length - 1, e = o.w[i] - o.mu[i];
+    var F = 0.5 * o.ps * e * e + 0.5 * o.pp * Math.pow(o.mu[i] - 37, 2);
+    kpi('#a-kpi', [['最後の体温 s', fmt(o.w[i], 2) + ' ℃'], ['最後の信念 μ', fmt(o.mu[i], 2) + ' ℃'], ['予測誤差 s − μ', nf(e, 2)], ['F（最後）', nf(F, 2)], ['行動の量（累積）', nf(o.cum, 1)]]);
+  } else kpi('#a-kpi', []);
+}
+function actRun() {
+  actLabels(); if (aAnim) cancelAnimationFrame(aAnim);
+  var o = actSim(), n = 0;
+  (function step() { n += 3; actPlot(o, n); if (n < o.t.length) aAnim = requestAnimationFrame(step); })();
+}
+function actInit() {
+  ['#a-pp', '#a-ps', '#a-h'].forEach(function (id) { $(id).addEventListener('input', function () { actLabels(); setOn('#a-preset', '.none'); }); $(id).addEventListener('change', actRun); });
+  toggleGroup('#a-on', function (b) { aAct = +b.dataset.v; actRun(); });
+  toggleGroup('#a-preset', function (b) { $('#a-pp').value = b.dataset.p === 'strong' ? 60 : -80; $('#a-ps').value = 0; actRun(); });
+  $('#a-run').onclick = actRun;
+  actLabels();
+}
+
+// ================= ⑥ ヒントつきスロット =================
+var eTerms = { ig: 1, pv: 1 };
+function efeCalc() {
+  var p = rv('#e-p') / 100, h = rv('#e-h') / 100, w = rv('#e-w') / 100;
+  var cb = rv('#e-cb') / 10, cs = rv('#e-cs') / 10, cl = rv('#e-cl') / 10, g = rv('#e-g') / 10;
+  $('#e-pv').textContent = fmt(p, 2); $('#e-hv').textContent = fmt(h, 2); $('#e-wv').textContent = fmt(w, 2);
+  $('#e-cbv').textContent = fmt(cb, 1); $('#e-csv').textContent = fmt(cs, 1); $('#e-clv').textContent = nf(cl, 1); $('#e-gv').textContent = fmt(g, 1);
+  // 結果の好み：なし, 外れ, 小当たり, 大当たり
+  var lc = [0, cl, cs, cb], z = lse(lc), lnC = lc.map(function (x) { return x - z; });
+  var S = [p, 1 - p]; // 状態：左が当たり台 / 右が当たり台
+  function winP(choice, s) { return choice === s ? w : 1 - w; } // choice 0=左, 1=右
+  // 結合分布 joint[s][o] から 情報利得 I(s;o) と 実用的価値
+  function evalJoint(joint, prefIdx) {
+    var nO = joint[0].length, Po = [], ig = 0, pv = 0;
+    for (var o = 0; o < nO; o++) Po.push(joint[0][o] + joint[1][o]);
+    for (var s = 0; s < 2; s++) for (o = 0; o < nO; o++) { var j = joint[s][o]; if (j > 0) ig += j * (L(j) - L(S[s] * Po[o])); }
+    for (o = 0; o < nO; o++) pv += Po[o] * lnC[prefIdx[o]];
+    return { ig: ig, pv: pv, win: null };
+  }
+  var res = [];
+  [0, 1].forEach(function (c) {
+    var joint = [0, 1].map(function (s) { var wp = winP(c, s); return [S[s] * wp, S[s] * (1 - wp)]; });
+    var r = evalJoint(joint, [3, 1]); r.name = (c === 0 ? '左' : '右') + 'をすぐ選ぶ'; r.win = joint[0][0] + joint[1][0]; res.push(r);
+  });
+  // ヒント：観測 (ヒント左/右) × (当たり/外れ)、ヒント後は事後が大きい台を選ぶ
+  var joint = [[0, 0, 0, 0], [0, 0, 0, 0]], win = 0;
+  [0, 1].forEach(function (hint) {
+    var ph = [hint === 0 ? h : 1 - h, hint === 1 ? h : 1 - h]; // P(hint | s)
+    var post0 = S[0] * ph[0] / (S[0] * ph[0] + S[1] * ph[1]);
+    var choice = post0 >= 0.5 ? 0 : 1;
+    [0, 1].forEach(function (s) {
+      var wp = winP(choice, s);
+      joint[s][hint * 2] += S[s] * ph[s] * wp; joint[s][hint * 2 + 1] += S[s] * ph[s] * (1 - wp);
+      win += S[s] * ph[s] * wp;
+    });
+  });
+  var r = evalJoint(joint, [2, 1, 2, 1]); r.name = 'ヒントを見てから選ぶ'; r.win = win; res.push(r);
+  res.forEach(function (r) { r.G = -(eTerms.ig ? r.ig : 0) - (eTerms.pv ? r.pv : 0); });
+  var pr = expNorm(res.map(function (r) { return -g * r.G; }));
+  res.forEach(function (r, i) { r.P = pr[i]; });
+  return res;
+}
+function efeDraw() {
+  var res = efeCalc();
+  $('#e-bars').innerHTML = barChart({ labels: res.map(function (r) { return r.name; }), vals: res.map(function (r) { return r.P; }), ymin: 0, ymax: 1, dec: 2, colors: [NAVY, NAVY, ORANGE], ylab: '方策の確率 P(π)', h: 250 });
+  $('#e-tab').innerHTML = '<tr><th>方策</th><th>当たる確率</th><th>情報利得</th><th>実用的価値</th><th>G</th></tr>' + res.map(function (r) {
+    return '<tr><td>' + r.name + '</td><td>' + fmt(r.win, 2) + '</td><td>' + nf(r.ig, 3) + '</td><td>' + nf(r.pv, 3) + '</td><td><b>' + nf(r.G, 3) + '</b></td></tr>';
+  }).join('');
+}
+function efeInit() {
+  ['#e-p', '#e-h', '#e-w', '#e-cb', '#e-cs', '#e-cl', '#e-g'].forEach(function (id) { $(id).addEventListener('input', function () { setOn('#e-preset', '.none'); efeDraw(); }); });
+  document.querySelectorAll('#e-terms button').forEach(function (b) { b.onclick = function () { eTerms[b.dataset.t] = eTerms[b.dataset.t] ? 0 : 1; b.classList.toggle('on', !!eTerms[b.dataset.t]); efeDraw(); }; });
+  toggleGroup('#e-preset', function (b) {
+    var P = { avoid: [50, 90, 80, 30, 20, -10], seek: [50, 90, 80, 50, 20, -10], sure: [90, 90, 80, 30, 20, -10] }[b.dataset.p];
+    ['#e-p', '#e-h', '#e-w', '#e-cb', '#e-cs', '#e-cl'].forEach(function (id, i) { $(id).value = P[i]; }); efeDraw();
+  });
+  efeDraw();
+}
+
+// ================= ⑦ リスクと曖昧さ =================
+function raOne(qs, acc, c) {
+  var A = [[acc, 1 - acc], [1 - acc, acc]]; // A[s][o]
+  var Qs = [qs, 1 - qs], Qo = [Qs[0] * A[0][0] + Qs[1] * A[1][0], Qs[0] * A[0][1] + Qs[1] * A[1][1]], C = [c, 1 - c];
+  var risk = KLv(Qo, C), amb = Qs[0] * Hv(A[0]) + Qs[1] * Hv(A[1]);
+  var ig = Hv(Qo) - amb, pv = Qo[0] * L(C[0]) + Qo[1] * L(C[1]);
+  return { Qo: Qo, risk: risk, amb: amb, ig: ig, pv: pv, G1: risk + amb, G2: -ig - pv };
+}
+function raDraw() {
+  var c = rv('#r-c') / 100, sa = rv('#r-sa') / 100, aa = rv('#r-aa') / 100, sb = rv('#r-sb') / 100, ab = rv('#r-ab') / 100;
+  $('#r-cv').textContent = fmt(c, 2); $('#r-sav').textContent = fmt(sa, 2); $('#r-aav').textContent = fmt(aa, 2); $('#r-sbv').textContent = fmt(sb, 2); $('#r-abv').textContent = fmt(ab, 2);
+  var A = raOne(sa, aa, c), B = raOne(sb, ab, c);
+  function row(n, f) { return '<tr><td>' + n + '</td><td>' + f(A) + '</td><td>' + f(B) + '</td></tr>'; }
+  $('#r-tab').innerHTML = '<tr><th></th><th>方策 A</th><th>方策 B</th></tr>'
+    + row('予想される観測 Q(o1 | π)', function (r) { return fmt(r.Qo[0], 3); })
+    + row('リスク KL[Q(o|π) ‖ P(o|C)]', function (r) { return nf(r.risk, 3); })
+    + row('曖昧さ E[H[P(o|s)]]', function (r) { return nf(r.amb, 3); })
+    + row('<b>G ＝ リスク ＋ 曖昧さ</b>', function (r) { return '<b>' + nf(r.G1, 3) + '</b>'; })
+    + row('情報利得', function (r) { return nf(r.ig, 3); })
+    + row('実用的価値 E[ln P(o|C)]', function (r) { return nf(r.pv, 3); })
+    + row('<b>G ＝ −情報利得 − 実用的価値</b>', function (r) { return '<b>' + nf(r.G2, 3) + '</b>'; });
+  $('#r-bars').innerHTML = barChart({ labels: ['A：リスク', 'A：曖昧さ', 'B：リスク', 'B：曖昧さ'], vals: [A.risk, A.amb, B.risk, B.amb], ymin: 0, ymax: Math.max(1, Math.ceil(Math.max(A.risk, A.amb, B.risk, B.amb) * 2) / 2), dec: 2, colors: [ORANGE, NAVY, ORANGE, NAVY], ylab: 'nats', h: 240 });
+}
+function raInit() {
+  ['#r-c', '#r-sa', '#r-aa', '#r-sb', '#r-ab'].forEach(function (id) { $(id).addEventListener('input', function () { setOn('#r-preset', '.none'); raDraw(); }); });
+  function preset(k) {
+    var P = { slot: [90, 10, 100, 50, 100, '当たり10%の台', '当たり50%の台'], coin: [50, 50, 95, 50, 50, '天気予報を見る', 'コインを投げる'] }[k];
+    ['#r-c', '#r-sa', '#r-aa', '#r-sb', '#r-ab'].forEach(function (id, i) { $(id).value = P[i]; });
+    $('#r-na').textContent = P[5]; $('#r-nb').textContent = P[6]; raDraw();
+  }
+  toggleGroup('#r-preset', function (b) { preset(b.dataset.p); });
+  preset('slot');
+}
+
+
+// ================= ② 何回も観測 =================
+var Q = { truth: 1, hist: [] };
+function seqParams() { return { p0: rv('#q-p0') / 100, lf: rv('#q-lf') / 100, la: rv('#q-la') / 100 }; }
+function seqReplay() {
+  var P = seqParams(), b = P.p0, rows = [];
+  Q.hist.forEach(function (o) {
+    var lf = o ? P.lf : 1 - P.lf, la = o ? P.la : 1 - P.la, py = b * lf + (1 - b) * la, post = b * lf / py;
+    rows.push({ o: o, post: post, S: -L(py), BS: KLv([post, 1 - post], [b, 1 - b]) }); b = post;
+  });
+  return { rows: rows, P: P };
+}
+function seqDraw() {
+  var P = seqParams();
+  $('#q-p0v').textContent = fmt(P.p0, 2); $('#q-lfv').textContent = fmt(P.lf, 2); $('#q-lav').textContent = fmt(P.la, 2);
+  var r = seqReplay(), rows = r.rows, n = rows.length;
+  $('#q-obs').textContent = n ? rows.map(function (x) { return x.o ? '●' : '○'; }).join('') : '（まだ観測していません）';
+  var last = rows[n - 1];
+  kpi('#q-kpi', [['観測回数（●跳ねた ○跳ねない）', String(n)], ['いまの P(カエル)', fmt(n ? last.post : P.p0, 3)], ['最後のサプライズ', n ? nf(last.S) : '—'], ['最後のベイズ的サプライズ', n ? nf(last.BS) : '—']]);
+  var xs = [0], ps = [P.p0];
+  rows.forEach(function (x, i) { xs.push(i + 1); ps.push(x.post); });
+  var xmax = Math.max(10, n);
+  $('#q-post').innerHTML = lineChart({ x: xs, xmin: 0, xmax: xmax, ymin: 0, ymax: 1, ylab: 'P(カエル)', xlab: '観測回数', xticks: [[0, '0'], [xmax, String(xmax)]], series: [{ vals: ps, color: ORANGE, dots: n <= 40 }], h: 220 });
+  var xs2 = rows.map(function (x, i) { return i + 1; });
+  if (n) $('#q-surp').innerHTML = lineChart({ x: xs2, xmin: 0, xmax: xmax, ymin: 0, ymax: 3, ylab: 'nats', xlab: '観測回数', xticks: [[0, '0'], [xmax, String(xmax)]], legendLeft: false,
+    series: [{ name: 'サプライズ', vals: rows.map(function (x) { return x.S; }), color: NAVY, dots: n <= 40 }, { name: 'ベイズ的サプライズ', vals: rows.map(function (x) { return x.BS; }), color: ORANGE, dots: n <= 40 }], h: 220 });
+  else $('#q-surp').innerHTML = '';
+}
+function seqObserve(k) {
+  var P = seqParams();
+  for (var i = 0; i < k; i++) { var pj = Q.truth ? P.lf : P.la; Q.hist.push(Math.random() < pj ? 1 : 0); }
+  seqDraw();
+}
+function seqInit() {
+  ['#q-p0', '#q-lf', '#q-la'].forEach(function (id) { $(id).addEventListener('input', seqDraw); });
+  toggleGroup('#q-truth', function (b) { Q.truth = +b.dataset.t; Q.hist = []; seqDraw(); });
+  $('#q-one').onclick = function () { seqObserve(1); };
+  $('#q-ten').onclick = function () { seqObserve(10); };
+  $('#q-reset').onclick = function () { Q.hist = []; seqDraw(); };
+  seqDraw();
+}
+
+// ================= ④ モデルと世界のずれ =================
+var G4 = { learn: 0, obs: [] };
+function gapRun() {
+  var t = rv('#g-t') / 100, m0 = rv('#g-m') / 100;
+  var a = m0 * 10, b = (1 - m0) * 10, m = m0, cum = 0, out = { avg: [], m: [m0], H: [] };
+  G4.obs.forEach(function (o, i) {
+    var p = o ? m : 1 - m; cum += -L(p); out.avg.push(cum / (i + 1)); out.H.push(H2(t));
+    if (G4.learn) { if (o) a++; else b++; m = a / (a + b); }
+    out.m.push(m);
+  });
+  out.t = t; out.mNow = m; return out;
+}
+function gapDraw() {
+  var t = rv('#g-t') / 100, m0 = rv('#g-m') / 100;
+  $('#g-tv').textContent = fmt(t, 2); $('#g-mv').textContent = fmt(m0, 2);
+  var o = gapRun(), n = G4.obs.length;
+  var hawk = G4.obs.reduce(function (s, x) { return s + x; }, 0);
+  var exp0 = H2(t) + KLv([t, 1 - t], [m0, 1 - m0]);
+  kpi('#g-kpi', [['観測した鳥', n + '羽（タカ ' + hawk + '）'], ['平均サプライズ', n ? nf(o.avg[n - 1], 3) : '—'], ['世界のエントロピー H(t)', nf(H2(t), 3)], ['最初のモデルでの期待値 H＋KL', nf(exp0, 3)], ['いまの m', fmt(o.mNow, 3)]]);
+  var xmax = Math.max(20, n), xs = [], i;
+  for (i = 1; i <= n; i++) xs.push(i);
+  var ymax = Math.max(1, Math.ceil(Math.max.apply(null, [exp0].concat(o.avg.slice(Math.min(3, n)))) * 2) / 2);
+  $('#g-plot').innerHTML = n ? lineChart({ x: xs, xmin: 0, xmax: xmax, ymin: 0, ymax: Math.min(ymax, 4), ylab: 'nats', xlab: '観測した鳥の数', xticks: [[0, '0'], [xmax, String(xmax)]], legendLeft: false,
+    series: [{ name: '平均サプライズ', vals: o.avg, color: ORANGE }, { name: '世界のエントロピー', vals: o.H, color: NAVY, dash: true }], h: 230 }) : '<p class="muted">「観測」を押してください。</p>';
+  var xs2 = [0].concat(xs);
+  $('#g-mplot').innerHTML = lineChart({ x: xs2, xmin: 0, xmax: xmax, ymin: 0, ymax: 1, ylab: 'm', xlab: '観測した鳥の数', xticks: [[0, '0'], [xmax, String(xmax)]], legendLeft: false,
+    series: [{ name: 'モデルの m', vals: o.m, color: ORANGE }, { name: '本当の t', vals: xs2.map(function () { return t; }), color: NAVY, dash: true }], h: 200 });
+}
+function gapInit() {
+  ['#g-t', '#g-m'].forEach(function (id) { $(id).addEventListener('input', function () { G4.obs = []; gapDraw(); }); });
+  toggleGroup('#g-learn', function (b) { G4.learn = +b.dataset.v; gapDraw(); });
+  function go(k) { var t = rv('#g-t') / 100; for (var i = 0; i < k; i++) G4.obs.push(Math.random() < t ? 1 : 0); gapDraw(); }
+  $('#g-go').onclick = function () { go(20); }; $('#g-go2').onclick = function () { go(200); };
+  $('#g-reset').onclick = function () { G4.obs = []; gapDraw(); };
+  gapDraw();
+}
+
+// ================= ⑦ 予測誤差と精度 =================
+var nAnim = null;
+function gaussP() { return { mp: rv('#n-mp') / 10, pp: logSlider(rv('#n-pp'), 0.1, 10), y: rv('#n-y') / 10, ps: logSlider(rv('#n-ps'), 0.1, 10) }; }
+function gaussDraw(traj) {
+  var P = gaussP();
+  $('#n-mpv').textContent = fmt(P.mp, 1); $('#n-ppv').textContent = fmt(P.pp, 2); $('#n-yv').textContent = fmt(P.y, 1); $('#n-psv').textContent = fmt(P.ps, 2);
+  var post = (P.pp * P.mp + P.ps * P.y) / (P.pp + P.ps), ppost = P.pp + P.ps;
+  var xs = [], a = [], b = [], c = [];
+  for (var x = 34; x <= 42.001; x += 0.04) {
+    xs.push(x);
+    a.push(Math.sqrt(P.pp / (2 * Math.PI)) * Math.exp(-0.5 * P.pp * (x - P.mp) * (x - P.mp)));
+    b.push(Math.sqrt(P.ps / (2 * Math.PI)) * Math.exp(-0.5 * P.ps * (x - P.y) * (x - P.y)));
+    c.push(Math.sqrt(ppost / (2 * Math.PI)) * Math.exp(-0.5 * ppost * (x - post) * (x - post)));
+  }
+  var ym = Math.max.apply(null, a.concat(b, c)) * 1.1;
+  $('#n-dist').innerHTML = lineChart({ x: xs, xmin: 34, xmax: 42, ymin: 0, ymax: Math.round(ym * 100) / 100, ylab: '確率密度', xlab: '値', xticks: [[35, '35'], [37, '37'], [39, '39'], [41, '41']], legendLeft: true,
+    series: [{ name: '予測（事前）', vals: a, color: NAVY, dash: true }, { name: '感覚（尤度）', vals: b, color: ORANGE, dash: true }, { name: '信念（事後）', vals: c, color: '#2a9d8f', w: 3 }], h: 240 });
+  var F = function (m) { return 0.5 * P.ps * (P.y - m) * (P.y - m) + 0.5 * P.pp * (m - P.mp) * (m - P.mp); };
+  kpi('#n-kpi', [['精度で重みづけた平均', fmt(post, 2)], ['感覚の予測誤差 y − μ', nf(P.y - post, 2)], ['予測の予測誤差 μ − μ予測', nf(post - P.mp, 2)], ['最小の F', nf(F(post), 2)]]);
+  if (traj) {
+    var ts = traj.map(function (_, i) { return i; });
+    $('#n-traj').innerHTML = lineChart({ x: ts, xmin: 0, xmax: traj.length - 1, ymin: 34, ymax: 42, yticks: [35, 37, 39, 41], ylab: 'μ', xlab: '更新の回数', xticks: [[0, '0'], [traj.length - 1, String(traj.length - 1)]], legendLeft: false,
+      series: [{ name: '信念 μ', vals: traj.map(function (t) { return t.m; }), color: '#2a9d8f', dots: true }, { name: '行き着く先', vals: ts.map(function () { return post; }), color: GRAYC, dash: true }], h: 200 })
+      + '<p class="muted">F：' + traj.filter(function (_, i) { return i % 5 === 0 || i === traj.length - 1; }).map(function (t) { return nf(t.F, 2); }).join(' → ') + '</p>';
+  }
+}
+function gaussRun() {
+  var P = gaussP(), m = P.mp, traj = [], lr = 0.6 / (P.pp + P.ps), k = 0;
+  var F = function (m) { return 0.5 * P.ps * (P.y - m) * (P.y - m) + 0.5 * P.pp * (m - P.mp) * (m - P.mp); };
+  traj.push({ m: m, F: F(m) });
+  if (nAnim) clearInterval(nAnim);
+  nAnim = setInterval(function () {
+    m += lr * (P.ps * (P.y - m) - P.pp * (m - P.mp)); traj.push({ m: m, F: F(m) }); gaussDraw(traj);
+    if (++k >= 25) clearInterval(nAnim);
+  }, 90);
+}
+function gaussInit() {
+  ['#n-mp', '#n-pp', '#n-y', '#n-ps'].forEach(function (id) { $(id).addEventListener('input', function () { gaussDraw(null); $('#n-traj').innerHTML = '<p class="muted">「予測誤差で μ を更新」を押してください。</p>'; }); });
+  $('#n-go').onclick = gaussRun; gaussDraw(null); $('#n-traj').innerHTML = '<p class="muted">「予測誤差で μ を更新」を押してください。</p>';
+}
+
+// ================= ⑧ 単純さと正確さ =================
+var O = { flips: [] };
+var GRIDN = 400;
+function occamCalc(h, t) {
+  var n = h + t, lw = [], th = [];
+  for (var i = 0; i < GRIDN; i++) { var x = (i + 0.5) / GRIDN; th.push(x); lw.push(h * L(x) + t * L(1 - x)); }
+  var lz = lse(lw) - L(GRIDN); // ln evidence（一様事前）
+  var post = expNorm(lw); // 格子上の事後
+  var acc = 0, cx = 0;
+  for (i = 0; i < GRIDN; i++) { acc += post[i] * lw[i]; if (post[i] > 0) cx += post[i] * (L(post[i]) - L(1 / GRIDN)); }
+  return { simple: { cx: 0, acc: n * L(0.5), F: -n * L(0.5) }, complex: { cx: cx, acc: acc, F: cx - acc, lz: lz } };
+}
+function occamDraw() {
+  var bt = rv('#o-b') / 100; $('#o-bv').textContent = fmt(bt, 2);
+  var h = 0, t = 0, diffs = [], xs = [];
+  O.flips.forEach(function (f, i) { if (f) h++; else t++; var c = occamCalc(h, t); diffs.push(c.simple.F - c.complex.F); xs.push(i + 1); });
+  var c = occamCalc(h, t), n = h + t;
+  kpi('#o-kpi', [['投げた回数', String(n)], ['表 / 裏', h + ' / ' + t], ['良いモデル', n ? (c.simple.F <= c.complex.F ? '単純なモデル' : '複雑なモデル') : '—']]);
+  $('#o-tab').innerHTML = '<tr><th></th><th>複雑さ</th><th>正確さ</th><th>F ＝ 複雑さ − 正確さ</th></tr>'
+    + '<tr><td>単純（半々）</td><td>' + nf(c.simple.cx) + '</td><td>' + nf(c.simple.acc) + '</td><td><b>' + nf(c.simple.F) + '</b></td></tr>'
+    + '<tr><td>複雑（θ 不明）</td><td>' + nf(c.complex.cx) + '</td><td>' + nf(c.complex.acc) + '</td><td><b>' + nf(c.complex.F) + '</b></td></tr>';
+  var ym = Math.max(1, Math.ceil(Math.max(c.simple.F, c.complex.F) / 5) * 5);
+  $('#o-bars').innerHTML = barChart({ labels: ['単純：F', '複雑：F', '複雑：複雑さ'], vals: [c.simple.F, c.complex.F, c.complex.cx], ymin: 0, ymax: ym, dec: 2, colors: [NAVY, ORANGE, '#f2c18d'], ylab: 'nats', h: 230 });
+  var xmax = Math.max(10, n), lo = Math.min(-3, Math.floor(Math.min.apply(null, diffs.concat([0])))), hi = Math.max(3, Math.ceil(Math.max.apply(null, diffs.concat([0]))));
+  $('#o-line').innerHTML = n ? lineChart({ x: xs, xmin: 0, xmax: xmax, ymin: lo, ymax: hi, ylab: 'F の差', xlab: '投げた回数', xticks: [[0, '0'], [xmax, String(xmax)]],
+    series: [{ vals: diffs, color: ORANGE }, { vals: xs.map(function () { return 0; }), color: GRAYC, dash: true, w: 1.2 }], h: 220 }) : '';
+}
+function occamInit() {
+  function go(k) { var b = rv('#o-b') / 100; for (var i = 0; i < k; i++) O.flips.push(Math.random() < b ? 1 : 0); occamDraw(); }
+  $('#o-ten').onclick = function () { go(10); }; $('#o-hund').onclick = function () { go(100); };
+  $('#o-reset').onclick = function () { O.flips = []; occamDraw(); };
+  $('#o-b').addEventListener('input', function () { O.flips = []; occamDraw(); });
+  occamDraw();
+}
+
+// ================= ⑩ 方策の精度 γ =================
+function gammaProbs() {
+  var g = logSlider(rv('#y-g'), 0.1, 10), G = [rv('#y-1') / 10, rv('#y-2') / 10, rv('#y-3') / 10];
+  return { g: g, G: G, p: expNorm(G.map(function (x) { return -g * x; })) };
+}
+function gammaDraw(counts) {
+  var r = gammaProbs();
+  $('#y-1v').textContent = fmt(r.G[0], 1); $('#y-2v').textContent = fmt(r.G[1], 1); $('#y-3v').textContent = fmt(r.G[2], 1); $('#y-gv').textContent = fmt(r.g, 2);
+  $('#y-bars').innerHTML = barChart({ labels: ['方策A', '方策B', '方策C'], vals: r.p, ymin: 0, ymax: 1, dec: 2, colors: [ORANGE, NAVY, NAVY], ylab: 'P(π)', h: 220 });
+  $('#y-hist').innerHTML = counts ? barChart({ labels: ['方策A', '方策B', '方策C'], vals: counts, ymin: 0, ymax: 100, dec: 0, colors: [ORANGE, NAVY, NAVY], ylab: '回数', h: 220 }) : '<p class="muted">「100回選ぶ」を押してください。</p>';
+}
+function gammaInit() {
+  ['#y-1', '#y-2', '#y-3', '#y-g'].forEach(function (id) { $(id).addEventListener('input', function () { gammaDraw(null); }); });
+  $('#y-go').onclick = function () {
+    var p = gammaProbs().p, c = [0, 0, 0];
+    for (var i = 0; i < 100; i++) { var u = Math.random(); c[u < p[0] ? 0 : u < p[0] + p[1] ? 1 : 2]++; }
+    gammaDraw(c);
+  };
+  gammaDraw(null);
+}
+
+// ================= ⑪ エスプレッソ =================
+function cafeDraw() {
+  var p = rv('#c-p') / 100, ce = rv('#c-e') / 10, cc = rv('#c-c') / 10, g = rv('#c-g') / 10;
+  $('#c-pv').textContent = fmt(p, 2); $('#c-ev').textContent = fmt(ce, 1); $('#c-cv').textContent = nf(cc, 1); $('#c-gv').textContent = fmt(g, 1);
+  var lc = [0, ce, cc], z = lse(lc), ln = lc.map(function (x) { return x - z; }); // なし, エスプレッソ, 閉まった店
+  var IG = H2(p); // 1ステップ目の観測で曜日がわかる
+  var pol = [
+    { name: 'A：平日のカフェへ', pv: 2 * (p * ln[1] + (1 - p) * ln[2]), esp: p },
+    { name: 'B：週末のカフェへ', pv: 2 * ((1 - p) * ln[1] + p * ln[2]), esp: 1 - p },
+    { name: 'C：カレンダー → 開いている店', pv: ln[0] + ln[1], esp: 1 }
+  ];
+  pol.forEach(function (r) { r.ig = IG; r.G = -r.ig - r.pv; });
+  var pr = expNorm(pol.map(function (r) { return -g * r.G; }));
+  $('#c-bars').innerHTML = barChart({ labels: ['A：平日の店', 'B：週末の店', 'C：カレンダー'], vals: pr, ymin: 0, ymax: 1, dec: 2, colors: [NAVY, NAVY, ORANGE], ylab: '方策の確率 P(π)', h: 240 });
+  $('#c-tab').innerHTML = '<tr><th>方策</th><th>飲める確率</th><th>情報利得</th><th>実用的価値</th><th>G</th></tr>' + pol.map(function (r) {
+    return '<tr><td>' + r.name + '</td><td>' + fmt(r.esp, 2) + '</td><td>' + nf(r.ig, 3) + '</td><td>' + nf(r.pv, 3) + '</td><td><b>' + nf(r.G, 3) + '</b></td></tr>';
+  }).join('');
+}
+function cafeInit() { ['#c-p', '#c-e', '#c-c', '#c-g'].forEach(function (id) { $(id).addEventListener('input', cafeDraw); }); cafeDraw(); }
+
+// ---- 起動
+tabs(['bayes', 'seq', 'kl', 'gap', 'act', 'vfe', 'gauss', 'occam', 'boltz', 'gamma', 'cafe', 'efe', 'ra']);
+['vfe', 'boltz'].forEach(function (id) { $('#tab-' + id).addEventListener('click', function () { id === 'vfe' ? vfeDraw() : boltzDraw(); }); });
+$('#tab-act').addEventListener('click', function () { setTimeout(actRun, 50); });
+bayesInit(); klInit(); vfeInit(); boltzInit(); actInit(); efeInit(); raInit();
+seqInit(); gapInit(); gaussInit(); occamInit(); gammaInit(); cafeInit();
+$('#v-q').value = 10; vfeDraw(); boltzDraw(); actRun();
+
+</script>
+</body></html>
